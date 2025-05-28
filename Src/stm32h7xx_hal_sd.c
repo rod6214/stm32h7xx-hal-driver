@@ -3160,6 +3160,10 @@ static uint32_t SD_PowerON(SD_HandleTypeDef *hsd)
     }
 
   }
+  else if (errorstate == HAL_SD_ERROR_CMD_RSP_TIMEOUT)
+  {
+	  hsd->SdCard.CardVersion = CARD_V1_X;
+  }
   else
   {
     hsd->SdCard.CardVersion = CARD_V2_X;
@@ -3174,19 +3178,22 @@ static uint32_t SD_PowerON(SD_HandleTypeDef *hsd)
       return HAL_SD_ERROR_UNSUPPORTED_FEATURE;
     }
   }
+
+  uint32_t capacity = hsd->SdCard.CardVersion == CARD_V2_X ? SDMMC_HIGH_CAPACITY : SDMMC_STD_CAPACITY;
   /* SD CARD */
   /* Send ACMD41 SD_APP_OP_COND with Argument 0x80100000 */
   while ((count < SDMMC_MAX_VOLT_TRIAL) && (validvoltage == 0U))
   {
     /* SEND CMD55 APP_CMD with RCA as 0 */
     errorstate = SDMMC_CmdAppCommand(hsd->Instance, 0);
-    if (errorstate != HAL_SD_ERROR_NONE)
+    /*CARDS V1_X always returns error illegal command*/
+    if (errorstate != HAL_SD_ERROR_NONE && errorstate != HAL_SD_ERROR_ILLEGAL_CMD)
     {
       return errorstate;
     }
 
     /* Send CMD41 */
-    errorstate = SDMMC_CmdAppOperCommand(hsd->Instance, SDMMC_VOLTAGE_WINDOW_SD | SDMMC_HIGH_CAPACITY |
+    errorstate = SDMMC_CmdAppOperCommand(hsd->Instance, SDMMC_VOLTAGE_WINDOW_SD | (capacity) |
                                          SD_SWITCH_1_8V_CAPACITY);
     if (errorstate != HAL_SD_ERROR_NONE)
     {
